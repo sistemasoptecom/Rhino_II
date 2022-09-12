@@ -61,8 +61,10 @@
         <EntityTypeShape EntityType="DB_A642ED_siscointModel.depreciacion_2022old" Width="1.5" PointX="22.75" PointY="10.75" IsExpanded="true" />
         <EntityTypeShape EntityType="DB_A642ED_siscointModel.jefes" Width="1.5" PointX="14.75" PointY="22.75" IsExpanded="true" />
         <EntityTypeShape EntityType="DB_A642ED_siscointModel.pedidos_tiempo_diff" Width="1.5" PointX="23.375" PointY="16.75" />
-        <EntityTypeShape EntityType="DB_A642ED_siscointModel.amortizacion" Width="1.5" PointX="17.375" PointY="23.75" />
         <EntityTypeShape EntityType="DB_A642ED_siscointModel.detalle_pedido_diff_acta" Width="1.5" PointX="23.375" PointY="19.75" />
+        <EntityTypeShape EntityType="DB_A642ED_siscointModel.temp_entrada_producto" Width="1.5" PointX="19.375" PointY="23.75" />
+        <EntityTypeShape EntityType="DB_A642ED_siscointModel.amortizacion" Width="1.5" PointX="21.375" PointY="23.75" />
+        <EntityTypeShape EntityType="DB_A642ED_siscointModel.entrada_producto_diferido" Width="1.5" PointX="23.375" PointY="23.75" />
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>

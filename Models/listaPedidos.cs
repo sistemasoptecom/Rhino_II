@@ -8,6 +8,7 @@ namespace Rhino.Models
     public class listaPedidos
     {
         public int nro_pedido { get; set; }
+        public string codigo_art { get; set; }
         public string descripcion { get; set; }
         public Double total { get; set; }
         public int tiempo { get; set; }

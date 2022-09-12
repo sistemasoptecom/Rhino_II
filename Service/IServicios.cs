@@ -846,6 +846,17 @@ namespace Rhino.Service
         [OperationContract]
         [WebInvoke(
            Method = "POST",
+           UriTemplate = "/ListarpedidosAmortizar",
+           ResponseFormat = WebMessageFormat.Json,
+           RequestFormat = WebMessageFormat.Json,
+           BodyStyle = WebMessageBodyStyle.WrappedRequest
+       )]
+
+        string ListarpedidosAmortizar();
+
+        [OperationContract]
+        [WebInvoke(
+           Method = "POST",
            UriTemplate = "/CreatePedidos_Diff",
            ResponseFormat = WebMessageFormat.Json,
            RequestFormat = WebMessageFormat.Json,
@@ -1621,8 +1632,26 @@ namespace Rhino.Service
         )]
         string create_traslado(string json);
 
-      
 
+        [OperationContract]
+        [WebInvoke(
+        Method = "POST",
+        UriTemplate = "/SaveFileArticulosDiff",
+        ResponseFormat = WebMessageFormat.Json,
+        RequestFormat = WebMessageFormat.Json,
+        BodyStyle = WebMessageBodyStyle.WrappedRequest
+        )]
+        string SaveFileArticulosDiff(string json);
+
+        [OperationContract]
+        [WebInvoke(
+        Method = "POST",
+        UriTemplate = "/setIngresoAmortizacion",
+        ResponseFormat = WebMessageFormat.Json,
+        RequestFormat = WebMessageFormat.Json,
+        BodyStyle = WebMessageBodyStyle.WrappedRequest
+        )]
+        string setIngresoAmortizacion(string json);
 
 
 

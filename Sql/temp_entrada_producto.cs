@@ -12,17 +12,20 @@ namespace Rhino.Sql
     using System;
     using System.Collections.Generic;
     
-    public partial class detalle_pedido_diff_acta
+    public partial class temp_entrada_producto
     {
         public int id { get; set; }
-        public int id_pedido { get; set; }
-        public Nullable<int> consecutivo { get; set; }
+        public int tipo { get; set; }
+        public int pedido { get; set; }
+        public string asignacion { get; set; }
         public string cod_articulo { get; set; }
-        public string usuario { get; set; }
+        public string descripcion { get; set; }
+        public string observacion { get; set; }
+        public string ccosto { get; set; }
+        public System.DateTime causacion { get; set; }
         public int Estado { get; set; }
-        public int EsPedidoLegalizado { get; set; }
-        public Nullable<System.DateTime> FechaCreacion { get; set; }
-        public Nullable<System.DateTime> FechaActualizacion { get; set; }
-        public Nullable<int> EsActivado { get; set; }
+        public System.DateTime FechaCreacion { get; set; }
+        public string usuario { get; set; }
+        public int EsProcesado { get; set; }
     }
 }

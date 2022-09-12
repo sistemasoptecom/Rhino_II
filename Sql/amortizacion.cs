@@ -30,6 +30,8 @@ namespace Rhino.Sql
         public Nullable<System.DateTime> fecha_ini_amortizacion { get; set; }
         public Nullable<int> cuota { get; set; }
         public Nullable<int> EsAmortizacionActiva { get; set; }
+        public string Imei { get; set; }
+        public Nullable<int> EsIngresada { get; set; }
         public Nullable<int> Estado { get; set; }
         public System.DateTime FechaCreacion { get; set; }
         public System.DateTime FechaActualizacion { get; set; }

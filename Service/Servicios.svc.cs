@@ -20,6 +20,7 @@ using System.Globalization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Rhino.Models;
+using GemBox.Spreadsheet;
 
 namespace Rhino.Service
 {
@@ -5899,6 +5900,7 @@ namespace Rhino.Service
                             listPedidos.Add(new listaPedidos
                             {
                                 nro_pedido = Convert.ToInt32(srd["nro_pedido"]),
+                                codigo_art = srd["codigo_art"]+"",
                                 descripcion = srd["descripcion"]+"",
                                 total = Convert.ToDouble(srd["total"]),
                                 tiempo = Convert.ToInt32(srd["tiempo"]),
@@ -5915,6 +5917,346 @@ namespace Rhino.Service
             }
 
                 return jss.Serialize(listPedidos);
+        }
+
+        public string ListarpedidosAmortizar()
+        {
+            string s = "";
+            List<listarPedidoAmortizacion> pedidosAmortizacion = new List<listarPedidoAmortizacion>();
+            var connection = System.Configuration.ConfigurationManager.ConnectionStrings["conexion"].ConnectionString;
+            string query = "select a.id_pedido, a.cod_art, a.descripcion, a.valor as valorSrp,a.v_util,a.cuota, \n"+
+                            "isnull((select top(1)nro_factura from acta_satisfaccion_nueva asn inner join detalle_acta_satis das on asn.consecutivo = das.consecutivo where das.nro_pedido = a.id_pedido), 'SIN FACTURA') as NumeroFac, \n"+
+                            "a.ccosto, a.cuenta,a.rubro, count(a.id_pedido) as cantidadpedido, \n"+
+                            "(select count(*) from amortizacion where EsIngresada = 1 and id_pedido = a.id_pedido) as Amortizar from amortizacion a \n"+
+                            "group by a.id_pedido,a.cod_art,a.descripcion,a.valor,a.v_util,a.cuota,a.ccosto,a.cuenta,a.rubro";
+            using (SqlConnection con = new SqlConnection(connection.ToString()))
+            {
+                using (SqlCommand cmd = new SqlCommand(query))
+                {
+                    cmd.Connection = con;
+                    con.Open();
+                    using (SqlDataReader srd = cmd.ExecuteReader())
+                    {
+                        while (srd.Read())
+                        {
+                            pedidosAmortizacion.Add(new listarPedidoAmortizacion
+                            {
+                                id_pedido = Convert.ToInt32(srd["id_pedido"]),
+                                cod_art = srd["cod_art"] + "",
+                                descripcion = srd["descripcion"] + "",
+                                valorSrp = Convert.ToDecimal(srd["valorSrp"]),
+                                v_util = Convert.ToInt32(srd["v_util"]),
+                                cuota = Convert.ToInt32(srd["cuota"]),
+                                NumeroFac = srd["NumeroFac"]+"",
+                                ccosto = srd["ccosto"]+"",
+                                cuenta = srd["cuenta"]+"",
+                                rubro = srd["rubro"]+"",
+                                cantidadpedido = Convert.ToInt32(srd["cantidadpedido"]),
+                                Amortizar = Convert.ToInt32(srd["Amortizar"])
+                            });
+                        }
+                    }
+                    con.Close();
+                }
+            }
+                
+            return jss.Serialize(pedidosAmortizacion);
+        }
+
+        public string SaveFileArticulosDiff(string json)
+        {
+            string s = "";
+            List<object> arr = new List<object>();
+            dynamic data = jss.DeserializeObject(json);
+            string dfile = data["file"];
+            string usuario = data["usuario"];
+            string name = "archivo_excel";
+            string file = dfile.Split(',')[1];
+            string ext = (dfile.Split(';')[0]).Split('/')[1];
+            int asignaConsecutivoPedido = 0;
+            byte[] toDecodeByte = Convert.FromBase64String(file);
+
+            string filename = "_" + DateTime.Now.ToString("yyyy-MM-dd-HHmmss");
+
+            if (ext.Equals("vnd.openxmlformats-officedocument.wordprocessingml.document"))
+            {
+                ext = "docx";
+            }
+            if (ext.Equals("vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+            {
+                ext = "xlsx";
+            }
+
+            if (ext.Equals("pdf"))
+            {
+
+                ext = "pdf";      //
+            }
+
+            String path = AppDomain.CurrentDomain.BaseDirectory;
+            string ruta = path + "ArchivosExcel/";
+
+            if (!Directory.Exists(ruta))
+            {
+                Directory.CreateDirectory(ruta);
+            }
+
+            if (!File.Exists(ruta + filename + "." + ext))
+            {
+                var fs = new BinaryWriter(new FileStream(ruta + name + "." + ext, FileMode.Append, FileAccess.Write));
+                fs.Write(toDecodeByte);
+                fs.Close();
+                //fs.ToString();
+               
+            }
+            string excel = ruta + name + "." + ext;
+            //Boolean EsArchivoProcesado = ProcesarArchivoExcel(excel, usuario, out Esprocesodo);
+            Boolean Esprocesodo;
+            int totalRegExcel = 0;
+            List<temp_entrada_producto_aux> temp_pedidos = ProcesarArchivoExcel(excel, usuario,conn, out Esprocesodo, out totalRegExcel);
+            List<temp_entrada_producto> temp_pedido_ = new List<temp_entrada_producto>();
+            if (Esprocesodo)
+            {
+                //
+                File.Delete(ruta + filename + "." + ext);
+                var fs = new BinaryWriter(new FileStream(ruta + filename + "." + ext, FileMode.Append, FileAccess.Write));
+                fs.Write(toDecodeByte);
+                fs.Close();
+            }
+            int pedidoValidar = temp_pedidos[0].pedido;
+            string cod_articulo = temp_pedidos[0].cod_articulo;
+
+            //validar pedido legalizado 
+
+            var detallePediodo = conn.detalle_pedido.Where(x => x.id_pedido == pedidoValidar && x.codigo_art.Equals(cod_articulo)).First();
+            var pedidoAmort = conn.amortizacion.Where(x => x.id_pedido == pedidoValidar && x.cod_art.Equals(cod_articulo) && x.EsIngresada == 0).ToList();
+            
+            if(detallePediodo != null)
+            {
+                if (totalRegExcel - 1 > pedidoAmort.Count())
+                {
+
+                    arr.Add(0);
+                    arr.Add("Error la cantidad de registros en el excel supera la cantida del pedido con el articulo");
+                }
+                else
+                {
+                    foreach(temp_entrada_producto_aux tem_aux in temp_pedidos)
+                    {
+                        CrearConsecutivoPedidoAmort(conn, out asignaConsecutivoPedido);
+                        temp_entrada_producto temp_entrada = new temp_entrada_producto();
+                        temp_entrada.tipo = tem_aux.tipo;
+                        temp_entrada.pedido = tem_aux.pedido;
+                        temp_entrada.asignacion = asignaConsecutivoPedido + "";
+                        temp_entrada.cod_articulo = tem_aux.cod_articulo;
+                        temp_entrada.descripcion = tem_aux.descripcion;
+                        temp_entrada.observacion = tem_aux.observacion;
+                        temp_entrada.ccosto = tem_aux.ccosto;
+                        temp_entrada.causacion = tem_aux.causacion;
+                        temp_entrada.Estado = tem_aux.Estado;
+                        temp_entrada.FechaCreacion = tem_aux.FechaCreacion;
+                        temp_entrada.usuario = tem_aux.usuario;
+                        temp_entrada.EsProcesado = 0;
+
+                        conn.temp_entrada_producto.Add(temp_entrada);
+                        conn.SaveChanges();
+
+                    }
+                    
+                }
+            }
+            else
+            {
+                arr.Add(0);
+                arr.Add("Error al procesar el Excel");
+            }
+
+            temp_pedido_ = conn.temp_entrada_producto.Where(x => x.pedido == pedidoValidar).ToList();
+            //var detallePedido = 
+            arr.Add(1);
+            arr.Add(temp_pedido_);
+            return jss.Serialize(arr);
+        }
+
+        public string setIngresoAmortizacion(string json)
+        {
+            string s = "";
+            //dynamic data = jss.DeserializeObject(json);
+
+            //string arrayTemp_entrada = data["registros"];
+
+            JObject data = JObject.Parse(json);
+            string registros = Convert.ToString(data["registros"]);
+
+            List<temp_entrada_producto> array_tem_obj = JsonConvert.DeserializeObject<List<temp_entrada_producto>>(registros);
+
+            try
+            {
+                foreach (temp_entrada_producto tempP in array_tem_obj)
+                {
+                    entrada_producto_diferido prod_diff = new entrada_producto_diferido();
+
+                    prod_diff.tipo = tempP.tipo;
+                    prod_diff.pedido = tempP.pedido;
+                    prod_diff.asignacion = tempP.asignacion;
+                    prod_diff.cod_articulo = tempP.cod_articulo;
+                    prod_diff.descripcion = tempP.descripcion;
+                    prod_diff.observacion = tempP.observacion;
+                    prod_diff.ccosto = tempP.ccosto;
+                    prod_diff.causacion = tempP.causacion;
+                    prod_diff.Estado = tempP.Estado;
+                    prod_diff.FechaCreacion = DateTime.Now;
+                    prod_diff.usuario = tempP.usuario;
+                    prod_diff.EsProcesado = 0;
+                    conn.entrada_producto_diferido.Add(prod_diff);
+                    int GuardaProductoDiff = conn.SaveChanges();
+
+                   if(GuardaProductoDiff > 0)
+                    {
+                        tempP.EsProcesado = 1;
+                        conn.Entry(tempP).State = System.Data.EntityState.Modified;
+                        conn.SaveChanges();
+                        amortizacion amort = conn.amortizacion.Where(x => x.id_pedido == tempP.pedido &&
+                                                                        x.cod_art == tempP.cod_articulo &&
+                                                                        x.ccosto == tempP.ccosto &&
+                                                                        x.EsIngresada == 0 &&
+                                                                        x.Imei == null).First();
+                        
+                        if (amort != null)
+                        {
+                            amort.EsIngresada = 1;
+                            amort.Imei = tempP.asignacion;
+                            conn.Entry(amort).State = System.Data.EntityState.Modified;
+                            conn.SaveChanges();
+                        }
+                    }
+                    
+                    
+                }
+                //conn.SaveChanges();
+                s = "si";
+                return jss.Serialize(s);
+            }
+            catch (DbEntityValidationException e)
+            {
+                string err = "";
+                foreach (var eve in e.EntityValidationErrors)
+                {
+                    Console.WriteLine("Entity of type \"{0}\" in state \"{1}\" has the following validation errors:",
+                        eve.Entry.Entity.GetType().Name, eve.Entry.State);
+                    foreach (var ve in eve.ValidationErrors)
+                    {
+                        err += ve.ErrorMessage;
+                        Console.WriteLine("- Property: \"{0}\", Error: \"{1}\"",
+                            ve.PropertyName, ve.ErrorMessage);
+                    }
+                }
+                return jss.Serialize(err);
+            }
+        }
+
+        public static List<temp_entrada_producto_aux> ProcesarArchivoExcel(string path, string usuario, rhinoEntities Rinho , out Boolean Esprocesado , out int cantidaExcel)
+        {
+            
+            Esprocesado = false;
+            cantidaExcel = 0;
+            List<temp_entrada_producto_aux> temp_produc = new List<temp_entrada_producto_aux>();
+            SpreadsheetInfo.SetLicense("FREE-LIMITED-KEY");
+            ExcelFile workbook = ExcelFile.Load(path);
+            var sb = new StringBuilder();
+            foreach (var worksheet in workbook.Worksheets)
+            {
+                sb.AppendLine();
+                sb.AppendFormat("{0} {1} {0}", new string('-', 25), worksheet.Name);
+                int counter = 0;
+                cantidaExcel = worksheet.Rows.Count();
+                
+                
+                foreach (var row in worksheet.Rows)
+                {
+                    if (counter >= 1)
+                    {
+                       
+                        
+                        //Excel e = new Excel();
+                        sb.AppendLine();
+                        temp_produc.Add(new temp_entrada_producto_aux
+                        {
+                            
+                            tipo = Convert.ToInt32(row.AllocatedCells[0].StringValue),
+                            pedido = Convert.ToInt32(row.AllocatedCells[1].StringValue),
+                            
+                            cod_articulo = row.AllocatedCells[3].StringValue,
+                            descripcion = row.AllocatedCells[4].StringValue,
+                            observacion = row.AllocatedCells[5].StringValue,
+                            ccosto = row.AllocatedCells[6].StringValue,
+                            causacion = DateTime.Now,
+                            Estado = 1,
+                            FechaCreacion = DateTime.Now,
+                            usuario = usuario,
+                            EsProcesado = 0
+                        }); ; ;
+
+                        
+                        
+                        
+                    }
+                    counter++;
+                }
+                
+            }
+            if(temp_produc.Count() == cantidaExcel - 1)
+            {
+                Esprocesado = true;
+            }
+            return temp_produc;
+        }
+
+        private static void CrearConsecutivoPedidoAmort(rhinoEntities Rinho,out int consecutivo)
+        {
+
+            consecutivo = 1000;
+
+
+            string consecutivoAsing = ultimoConsecutivoBaseDato();
+            if(consecutivoAsing != "")
+            {
+                consecutivo = Convert.ToInt32(consecutivoAsing) + 1;
+            }
+           
+        }
+
+        public static string ultimoConsecutivoBaseDato()
+        {
+            string consecutvo = "";
+            var connection = System.Configuration.ConfigurationManager.ConnectionStrings["conexion"].ConnectionString;
+            string query = "select max(asignacion) as asignacion from temp_entrada_producto";
+            using (SqlConnection con = new SqlConnection(connection.ToString()))
+            {
+                using (SqlCommand cmd = new SqlCommand(query))
+                {
+                    cmd.Connection = con;
+                    con.Open();
+                    using (SqlDataReader srd = cmd.ExecuteReader())
+                    {
+                        while (srd.Read())
+                        {
+                            if(srd["asignacion"] != null)
+                            {
+                                consecutvo = srd["asignacion"] + "";
+                            }
+                        }
+                    }
+                    con.Close();
+                }
+            }
+
+            return consecutvo;
+        }
+        public static string Base64Encode(string base64)
+        {
+            var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(base64);
+            return System.Convert.ToBase64String(plainTextBytes);
         }
         #endregion
 

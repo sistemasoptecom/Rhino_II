@@ -74,7 +74,6 @@
         <EntityType Name="amortizacion">
           <Key>
             <PropertyRef Name="id" />
-            <PropertyRef Name="id_pedido" />
           </Key>
           <Property Name="id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
           <Property Name="id_pedido" Type="int" Nullable="false" />
@@ -92,6 +91,8 @@
           <Property Name="fecha_ini_amortizacion" Type="datetime" />
           <Property Name="cuota" Type="int" />
           <Property Name="EsAmortizacionActiva" Type="int" />
+          <Property Name="Imei" Type="varchar" MaxLength="50" />
+          <Property Name="EsIngresada" Type="int" />
           <Property Name="Estado" Type="int" />
           <Property Name="FechaCreacion" Type="datetime" Nullable="false" />
           <Property Name="FechaActualizacion" Type="datetime" Nullable="false" />
@@ -438,6 +439,7 @@ advertencia 6002: La tabla o vista 'db_a642ed_prueba.dbo.depreciacion_2022old' n
           <Property Name="usuario" Type="varchar" MaxLength="50" Nullable="false" />
           <Property Name="Estado" Type="int" Nullable="false" />
           <Property Name="EsPedidoLegalizado" Type="int" Nullable="false" />
+          <Property Name="EsActivado" Type="int" />
           <Property Name="FechaCreacion" Type="datetime" />
           <Property Name="FechaActualizacion" Type="datetime" />
         </EntityType>
@@ -549,6 +551,24 @@ advertencia 6002: La tabla o vista 'db_a642ed_prueba.dbo.depreciacion_2022old' n
           <Property Name="codigo" Type="varchar" MaxLength="20" Nullable="false" />
           <Property Name="ruta_logo" Type="varchar" MaxLength="255" Nullable="false" />
           <Property Name="estado" Type="int" Nullable="false" />
+        </EntityType>
+        <EntityType Name="entrada_producto_diferido">
+          <Key>
+            <PropertyRef Name="id" />
+          </Key>
+          <Property Name="id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="tipo" Type="int" Nullable="false" />
+          <Property Name="pedido" Type="int" Nullable="false" />
+          <Property Name="asignacion" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="cod_articulo" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="descripcion" Type="varchar" MaxLength="50" />
+          <Property Name="observacion" Type="varchar" MaxLength="50" />
+          <Property Name="ccosto" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="causacion" Type="datetime" Nullable="false" />
+          <Property Name="Estado" Type="int" Nullable="false" />
+          <Property Name="FechaCreacion" Type="datetime" Nullable="false" />
+          <Property Name="usuario" Type="varchar" MaxLength="50" />
+          <Property Name="EsProcesado" Type="int" Nullable="false" />
         </EntityType>
         <EntityType Name="entregas">
           <Key>
@@ -1108,6 +1128,24 @@ advertencia 6002: La tabla o vista 'db_a642ed_prueba.dbo.jefes' no tiene definid
           <Property Name="rubro" Type="varchar" MaxLength="255" Nullable="false" />
           <Property Name="valor" Type="numeric" Precision="18" Scale="0" Nullable="false" />
         </EntityType>
+        <EntityType Name="temp_entrada_producto">
+          <Key>
+            <PropertyRef Name="id" />
+          </Key>
+          <Property Name="id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="tipo" Type="int" Nullable="false" />
+          <Property Name="pedido" Type="int" Nullable="false" />
+          <Property Name="asignacion" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="cod_articulo" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="descripcion" Type="varchar" MaxLength="50" />
+          <Property Name="observacion" Type="varchar" MaxLength="50" />
+          <Property Name="ccosto" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="causacion" Type="datetime" Nullable="false" />
+          <Property Name="Estado" Type="int" Nullable="false" />
+          <Property Name="FechaCreacion" Type="datetime" Nullable="false" />
+          <Property Name="usuario" Type="varchar" MaxLength="50" />
+          <Property Name="EsProcesado" Type="int" Nullable="false" />
+        </EntityType>
         <EntityType Name="temp_presiones_presupuesto">
           <Key>
             <PropertyRef Name="id" />
@@ -1253,6 +1291,7 @@ advertencia 6002: La tabla o vista 'db_a642ed_prueba.dbo.jefes' no tiene definid
           <EntitySet Name="directivos" EntityType="Self.directivos" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="empleado" EntityType="Self.empleado" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="empresa" EntityType="Self.empresa" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="entrada_producto_diferido" EntityType="Self.entrada_producto_diferido" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="entregas" EntityType="Self.entregas" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="grupos" EntityType="Self.grupos" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="histo_ajuste_presu" EntityType="Self.histo_ajuste_presu" Schema="dbo" store:Type="Tables" />
@@ -1274,6 +1313,7 @@ advertencia 6002: La tabla o vista 'db_a642ed_prueba.dbo.jefes' no tiene definid
           <EntitySet Name="srp" EntityType="Self.srp" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="sysdiagrams" EntityType="Self.sysdiagrams" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="temp_detalle_presiones" EntityType="Self.temp_detalle_presiones" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="temp_entrada_producto" EntityType="Self.temp_entrada_producto" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="temp_presiones_presupuesto" EntityType="Self.temp_presiones_presupuesto" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="tipo_usuario" EntityType="Self.tipo_usuario" Schema="dbo" store:Type="Tables" />
           <EntitySet Name="traslados presupuesto" EntityType="Self.traslados presupuesto" Schema="dbo" store:Type="Tables" />
@@ -2530,8 +2570,10 @@ FROM [dbo].[jefes] AS [jefes]</DefiningQuery>
             <Parameter Name="cantidadPed" Mode="In" Type="Int32" />
             <Parameter Name="codi_articulo" Mode="In" Type="String" />
           </FunctionImport>
-          <EntitySet Name="amortizacion" EntityType="DB_A642ED_siscointModel.amortizacion" />
           <EntitySet Name="detalle_pedido_diff_acta" EntityType="DB_A642ED_siscointModel.detalle_pedido_diff_acta" />
+          <EntitySet Name="temp_entrada_producto" EntityType="DB_A642ED_siscointModel.temp_entrada_producto" />
+          <EntitySet Name="amortizacion" EntityType="DB_A642ED_siscointModel.amortizacion" />
+          <EntitySet Name="entrada_producto_diferido" EntityType="DB_A642ED_siscointModel.entrada_producto_diferido" />
         </EntityContainer>
         <ComplexType Name="sp_helpdiagramdefinition_Result">
           <Property Type="Int32" Name="version" Nullable="true" />
@@ -2555,10 +2597,42 @@ FROM [dbo].[jefes] AS [jefes]</DefiningQuery>
           <Property Name="estado" Type="Int32" Nullable="false" />
           <Property Name="fechaCreacion" Type="DateTime" Nullable="false" Precision="3" />
         </EntityType>
+        <EntityType Name="detalle_pedido_diff_acta">
+          <Key>
+            <PropertyRef Name="id" />
+          </Key>
+          <Property Name="id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="id_pedido" Type="Int32" Nullable="false" />
+          <Property Name="consecutivo" Type="Int32" />
+          <Property Name="cod_articulo" Type="String" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="usuario" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="Estado" Type="Int32" Nullable="false" />
+          <Property Name="EsPedidoLegalizado" Type="Int32" Nullable="false" />
+          <Property Name="FechaCreacion" Type="DateTime" Precision="3" />
+          <Property Name="FechaActualizacion" Type="DateTime" Precision="3" />
+          <Property Name="EsActivado" Type="Int32" />
+        </EntityType>
+        <EntityType Name="temp_entrada_producto">
+          <Key>
+            <PropertyRef Name="id" />
+          </Key>
+          <Property Name="id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="tipo" Type="Int32" Nullable="false" />
+          <Property Name="pedido" Type="Int32" Nullable="false" />
+          <Property Name="asignacion" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="cod_articulo" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="descripcion" Type="String" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="observacion" Type="String" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="ccosto" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="causacion" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="Estado" Type="Int32" Nullable="false" />
+          <Property Name="FechaCreacion" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="usuario" Type="String" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="EsProcesado" Type="Int32" Nullable="false" />
+        </EntityType>
         <EntityType Name="amortizacion">
           <Key>
             <PropertyRef Name="id" />
-            <PropertyRef Name="id_pedido" />
           </Key>
           <Property Name="id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
           <Property Name="id_pedido" Type="Int32" Nullable="false" />
@@ -2576,23 +2650,29 @@ FROM [dbo].[jefes] AS [jefes]</DefiningQuery>
           <Property Name="fecha_ini_amortizacion" Type="DateTime" Precision="3" />
           <Property Name="cuota" Type="Int32" />
           <Property Name="EsAmortizacionActiva" Type="Int32" />
+          <Property Name="Imei" Type="String" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="EsIngresada" Type="Int32" />
           <Property Name="Estado" Type="Int32" />
           <Property Name="FechaCreacion" Type="DateTime" Nullable="false" Precision="3" />
           <Property Name="FechaActualizacion" Type="DateTime" Nullable="false" Precision="3" />
         </EntityType>
-        <EntityType Name="detalle_pedido_diff_acta">
+        <EntityType Name="entrada_producto_diferido">
           <Key>
             <PropertyRef Name="id" />
           </Key>
           <Property Name="id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
-          <Property Name="id_pedido" Type="Int32" Nullable="false" />
-          <Property Name="consecutivo" Type="Int32" />
-          <Property Name="cod_articulo" Type="String" MaxLength="50" FixedLength="false" Unicode="false" />
-          <Property Name="usuario" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="tipo" Type="Int32" Nullable="false" />
+          <Property Name="pedido" Type="Int32" Nullable="false" />
+          <Property Name="asignacion" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="cod_articulo" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="descripcion" Type="String" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="observacion" Type="String" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="ccosto" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="causacion" Type="DateTime" Nullable="false" Precision="3" />
           <Property Name="Estado" Type="Int32" Nullable="false" />
-          <Property Name="EsPedidoLegalizado" Type="Int32" Nullable="false" />
-          <Property Name="FechaCreacion" Type="DateTime" Precision="3" />
-          <Property Name="FechaActualizacion" Type="DateTime" Precision="3" />
+          <Property Name="FechaCreacion" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="usuario" Type="String" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="EsProcesado" Type="Int32" Nullable="false" />
         </EntityType>
       </Schema>
     </edmx:ConceptualModels>
@@ -3786,12 +3866,49 @@ FROM [dbo].[jefes] AS [jefes]</DefiningQuery>
           </EntitySetMapping>
           <FunctionImportMapping FunctionImportName="validate_presupuesto_diff" FunctionName="DB_A642ED_siscointModel.Store.validate_presupuesto_diff" />
           <FunctionImportMapping FunctionImportName="INSERT_AMORTIZACION" FunctionName="DB_A642ED_siscointModel.Store.INSERT_AMORTIZACION" />
+          <EntitySetMapping Name="detalle_pedido_diff_acta">
+            <EntityTypeMapping TypeName="DB_A642ED_siscointModel.detalle_pedido_diff_acta">
+              <MappingFragment StoreEntitySet="detalle_pedido_diff_acta">
+                <ScalarProperty Name="EsActivado" ColumnName="EsActivado" />
+                <ScalarProperty Name="FechaActualizacion" ColumnName="FechaActualizacion" />
+                <ScalarProperty Name="FechaCreacion" ColumnName="FechaCreacion" />
+                <ScalarProperty Name="EsPedidoLegalizado" ColumnName="EsPedidoLegalizado" />
+                <ScalarProperty Name="Estado" ColumnName="Estado" />
+                <ScalarProperty Name="usuario" ColumnName="usuario" />
+                <ScalarProperty Name="cod_articulo" ColumnName="cod_articulo" />
+                <ScalarProperty Name="consecutivo" ColumnName="consecutivo" />
+                <ScalarProperty Name="id_pedido" ColumnName="id_pedido" />
+                <ScalarProperty Name="id" ColumnName="id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="temp_entrada_producto">
+            <EntityTypeMapping TypeName="DB_A642ED_siscointModel.temp_entrada_producto">
+              <MappingFragment StoreEntitySet="temp_entrada_producto">
+                <ScalarProperty Name="EsProcesado" ColumnName="EsProcesado" />
+                <ScalarProperty Name="usuario" ColumnName="usuario" />
+                <ScalarProperty Name="FechaCreacion" ColumnName="FechaCreacion" />
+                <ScalarProperty Name="Estado" ColumnName="Estado" />
+                <ScalarProperty Name="causacion" ColumnName="causacion" />
+                <ScalarProperty Name="ccosto" ColumnName="ccosto" />
+                <ScalarProperty Name="observacion" ColumnName="observacion" />
+                <ScalarProperty Name="descripcion" ColumnName="descripcion" />
+                <ScalarProperty Name="cod_articulo" ColumnName="cod_articulo" />
+                <ScalarProperty Name="asignacion" ColumnName="asignacion" />
+                <ScalarProperty Name="pedido" ColumnName="pedido" />
+                <ScalarProperty Name="tipo" ColumnName="tipo" />
+                <ScalarProperty Name="id" ColumnName="id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
           <EntitySetMapping Name="amortizacion">
             <EntityTypeMapping TypeName="DB_A642ED_siscointModel.amortizacion">
               <MappingFragment StoreEntitySet="amortizacion">
                 <ScalarProperty Name="FechaActualizacion" ColumnName="FechaActualizacion" />
                 <ScalarProperty Name="FechaCreacion" ColumnName="FechaCreacion" />
                 <ScalarProperty Name="Estado" ColumnName="Estado" />
+                <ScalarProperty Name="EsIngresada" ColumnName="EsIngresada" />
+                <ScalarProperty Name="Imei" ColumnName="Imei" />
                 <ScalarProperty Name="EsAmortizacionActiva" ColumnName="EsAmortizacionActiva" />
                 <ScalarProperty Name="cuota" ColumnName="cuota" />
                 <ScalarProperty Name="fecha_ini_amortizacion" ColumnName="fecha_ini_amortizacion" />
@@ -3811,17 +3928,21 @@ FROM [dbo].[jefes] AS [jefes]</DefiningQuery>
               </MappingFragment>
             </EntityTypeMapping>
           </EntitySetMapping>
-          <EntitySetMapping Name="detalle_pedido_diff_acta">
-            <EntityTypeMapping TypeName="DB_A642ED_siscointModel.detalle_pedido_diff_acta">
-              <MappingFragment StoreEntitySet="detalle_pedido_diff_acta">
-                <ScalarProperty Name="FechaActualizacion" ColumnName="FechaActualizacion" />
-                <ScalarProperty Name="FechaCreacion" ColumnName="FechaCreacion" />
-                <ScalarProperty Name="EsPedidoLegalizado" ColumnName="EsPedidoLegalizado" />
-                <ScalarProperty Name="Estado" ColumnName="Estado" />
+          <EntitySetMapping Name="entrada_producto_diferido">
+            <EntityTypeMapping TypeName="DB_A642ED_siscointModel.entrada_producto_diferido">
+              <MappingFragment StoreEntitySet="entrada_producto_diferido">
+                <ScalarProperty Name="EsProcesado" ColumnName="EsProcesado" />
                 <ScalarProperty Name="usuario" ColumnName="usuario" />
+                <ScalarProperty Name="FechaCreacion" ColumnName="FechaCreacion" />
+                <ScalarProperty Name="Estado" ColumnName="Estado" />
+                <ScalarProperty Name="causacion" ColumnName="causacion" />
+                <ScalarProperty Name="ccosto" ColumnName="ccosto" />
+                <ScalarProperty Name="observacion" ColumnName="observacion" />
+                <ScalarProperty Name="descripcion" ColumnName="descripcion" />
                 <ScalarProperty Name="cod_articulo" ColumnName="cod_articulo" />
-                <ScalarProperty Name="consecutivo" ColumnName="consecutivo" />
-                <ScalarProperty Name="id_pedido" ColumnName="id_pedido" />
+                <ScalarProperty Name="asignacion" ColumnName="asignacion" />
+                <ScalarProperty Name="pedido" ColumnName="pedido" />
+                <ScalarProperty Name="tipo" ColumnName="tipo" />
                 <ScalarProperty Name="id" ColumnName="id" />
               </MappingFragment>
             </EntityTypeMapping>
