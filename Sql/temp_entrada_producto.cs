@@ -27,5 +27,6 @@ namespace Rhino.Sql
         public System.DateTime FechaCreacion { get; set; }
         public string usuario { get; set; }
         public int EsProcesado { get; set; }
+        public string valorActa { get; set; }
     }
 }

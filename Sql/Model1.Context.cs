@@ -88,6 +88,9 @@ namespace Rhino.Sql
         public DbSet<temp_entrada_producto> temp_entrada_producto { get; set; }
         public DbSet<amortizacion> amortizacion { get; set; }
         public DbSet<entrada_producto_diferido> entrada_producto_diferido { get; set; }
+        public DbSet<amortizacion_por_mes> amortizacion_por_mes { get; set; }
+        public DbSet<detalle_amortizacion> detalle_amortizacion { get; set; }
+        public DbSet<pedido_diferido_tiempo> pedido_diferido_tiempo { get; set; }
     
         public virtual ObjectResult<string> Depreciar_af()
         {

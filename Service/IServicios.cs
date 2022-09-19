@@ -854,6 +854,84 @@ namespace Rhino.Service
 
         string ListarpedidosAmortizar();
 
+
+        [OperationContract]
+        [WebInvoke(
+          Method = "POST",
+          UriTemplate = "/ListarPedidosTiempo",
+          ResponseFormat = WebMessageFormat.Json,
+          RequestFormat = WebMessageFormat.Json,
+          BodyStyle = WebMessageBodyStyle.WrappedRequest
+      )]
+
+        string ListarPedidosTiempo();
+
+        [OperationContract]
+        [WebInvoke(
+           Method = "POST",
+           UriTemplate = "/ActivarAmortizacion",
+           ResponseFormat = WebMessageFormat.Json,
+           RequestFormat = WebMessageFormat.Json,
+           BodyStyle = WebMessageBodyStyle.WrappedRequest
+       )]
+
+        string ActivarAmortizacion(string json);
+
+        [OperationContract]
+        [WebInvoke(
+           Method = "POST",
+           UriTemplate = "/listarDetallePedidoDiff",
+           ResponseFormat = WebMessageFormat.Json,
+           RequestFormat = WebMessageFormat.Json,
+           BodyStyle = WebMessageBodyStyle.WrappedRequest
+       )]
+
+        string listarDetallePedidoDiff(string json);
+
+        [OperationContract]
+        [WebInvoke(
+           Method = "POST",
+           UriTemplate = "/validarPedidoDiferidoSrp",
+           ResponseFormat = WebMessageFormat.Json,
+           RequestFormat = WebMessageFormat.Json,
+           BodyStyle = WebMessageBodyStyle.WrappedRequest
+       )]
+
+        string validarPedidoDiferidoSrp(string json);
+
+        [OperationContract]
+        [WebInvoke(
+          Method = "POST",
+          UriTemplate = "/ListarArticulosDiffActivos",
+          ResponseFormat = WebMessageFormat.Json,
+          RequestFormat = WebMessageFormat.Json,
+          BodyStyle = WebMessageBodyStyle.WrappedRequest
+      )]
+
+        string ListarArticulosDiffActivos();
+
+        [OperationContract]
+        [WebInvoke(
+           Method = "POST",
+           UriTemplate = "/setPedidoDiffTiempo",
+           ResponseFormat = WebMessageFormat.Json,
+           RequestFormat = WebMessageFormat.Json,
+           BodyStyle = WebMessageBodyStyle.WrappedRequest
+       )]
+
+        string setPedidoDiffTiempo(string json);
+
+        [OperationContract]
+        [WebInvoke(
+           Method = "POST",
+           UriTemplate = "/detalleArticuloAmortDiffActivo",
+           ResponseFormat = WebMessageFormat.Json,
+           RequestFormat = WebMessageFormat.Json,
+           BodyStyle = WebMessageBodyStyle.WrappedRequest
+       )]
+
+        string detalleArticuloAmortDiffActivo(string json);
+
         [OperationContract]
         [WebInvoke(
            Method = "POST",

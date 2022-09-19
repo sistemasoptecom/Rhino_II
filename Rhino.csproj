@@ -163,6 +163,7 @@
     </Compile>
     <Compile Include="Models\listaPedidos.cs" />
     <Compile Include="Models\listarPedidoAmortizacion.cs" />
+    <Compile Include="Models\PedidosDiferidos.cs" />
     <Compile Include="Models\temp_entrada_producto_aux.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Service\Archivo.svc.cs">
@@ -192,6 +193,9 @@
       <DependentUpon>Model1.tt</DependentUpon>
     </Compile>
     <Compile Include="Sql\amortizacion.cs">
+      <DependentUpon>Model1.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Sql\amortizacion_por_mes.cs">
       <DependentUpon>Model1.tt</DependentUpon>
     </Compile>
     <Compile Include="Sql\area_ccosto.cs">
@@ -237,6 +241,9 @@
       <DependentUpon>Model1.tt</DependentUpon>
     </Compile>
     <Compile Include="Sql\detalle_act_sat.cs">
+      <DependentUpon>Model1.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Sql\detalle_amortizacion.cs">
       <DependentUpon>Model1.tt</DependentUpon>
     </Compile>
     <Compile Include="Sql\detalle_depre.cs">
@@ -336,6 +343,9 @@
       <DependentUpon>Model1.tt</DependentUpon>
     </Compile>
     <Compile Include="Sql\pedidos_tiempo_diff.cs">
+      <DependentUpon>Model1.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Sql\pedido_diferido_tiempo.cs">
       <DependentUpon>Model1.tt</DependentUpon>
     </Compile>
     <Compile Include="Sql\permisos_usu.cs">

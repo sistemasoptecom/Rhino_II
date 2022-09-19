@@ -12,29 +12,28 @@ namespace Rhino.Sql
     using System;
     using System.Collections.Generic;
     
-    public partial class amortizacion
+    public partial class detalle_amortizacion
     {
         public int id { get; set; }
-        public int id_pedido { get; set; }
-        public string cod_art { get; set; }
+        public Nullable<int> id_pedido { get; set; }
+        public string imei { get; set; }
+        public string cod_articulo { get; set; }
         public string descripcion { get; set; }
-        public Nullable<double> valor { get; set; }
-        public string ano { get; set; }
-        public Nullable<System.DateTime> fecha_ejecucion { get; set; }
-        public Nullable<int> valor_ejecutado { get; set; }
-        public Nullable<int> v_util { get; set; }
-        public Nullable<int> v_util_restante { get; set; }
         public string ccosto { get; set; }
         public string cuenta { get; set; }
         public string rubro { get; set; }
-        public Nullable<System.DateTime> fecha_ini_amortizacion { get; set; }
+        public Nullable<int> valor_activo { get; set; }
+        public Nullable<System.DateTime> fecha_compra { get; set; }
+        public Nullable<System.DateTime> fecha_ini_amort { get; set; }
+        public Nullable<int> t_v_util { get; set; }
+        public Nullable<int> amort_acumulada { get; set; }
+        public Nullable<int> saldo_libros { get; set; }
+        public Nullable<System.DateTime> fecha_ejecucion { get; set; }
         public Nullable<int> cuota { get; set; }
-        public Nullable<int> EsAmortizacionActiva { get; set; }
-        public string Imei { get; set; }
-        public Nullable<int> EsIngresada { get; set; }
-        public Nullable<int> Estado { get; set; }
+        public Nullable<int> v_util_restante { get; set; }
+        public Nullable<int> mes_ult_ejecucion { get; set; }
+        public int Estado { get; set; }
         public System.DateTime FechaCreacion { get; set; }
         public System.DateTime FechaActualizacion { get; set; }
-        public Nullable<double> valorFactura { get; set; }
     }
 }

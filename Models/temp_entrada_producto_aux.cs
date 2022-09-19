@@ -14,6 +14,7 @@ namespace Rhino.Models
         public string descripcion { get; set; }
         public string observacion { get; set; }
         public string ccosto { get; set; }
+        public string valorActa { get; set; }
         public DateTime causacion { get; set; }
         public int Estado { get; set; }
         public DateTime FechaCreacion { get; set; }

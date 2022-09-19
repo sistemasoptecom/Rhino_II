@@ -65,6 +65,9 @@
         <EntityTypeShape EntityType="DB_A642ED_siscointModel.temp_entrada_producto" Width="1.5" PointX="19.375" PointY="23.75" />
         <EntityTypeShape EntityType="DB_A642ED_siscointModel.amortizacion" Width="1.5" PointX="21.375" PointY="23.75" />
         <EntityTypeShape EntityType="DB_A642ED_siscointModel.entrada_producto_diferido" Width="1.5" PointX="23.375" PointY="23.75" />
+        <EntityTypeShape EntityType="DB_A642ED_siscointModel.amortizacion_por_mes" Width="1.5" PointX="9.375" PointY="24.75" />
+        <EntityTypeShape EntityType="DB_A642ED_siscointModel.detalle_amortizacion" Width="1.5" PointX="25.375" PointY="0.75" />
+        <EntityTypeShape EntityType="DB_A642ED_siscointModel.pedido_diferido_tiempo" Width="1.5" PointX="25.375" PointY="6.75" />
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>

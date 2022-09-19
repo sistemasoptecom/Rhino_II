@@ -3085,9 +3085,8 @@ namespace Rhino.Service
                 foreach (dynamic item in list)
                 {
                     detalle_pedido r = new detalle_pedido();
-                    pedidos_tiempo_diff ptd = new pedidos_tiempo_diff();
-                    detalle_pedido_diff_acta dpda = new detalle_pedido_diff_acta();
-
+                    pedido_diferido_tiempo ptd = new pedido_diferido_tiempo();
+                    
                     r.id_pedido = p.nro_pedido;
                     r.codigo_art = item["codigo_art"];
                     r.descripcion = item["descripcion"];
@@ -3101,41 +3100,31 @@ namespace Rhino.Service
 
                     //entro en el pedido con el articulo y tiempo amortizar
 
-                    ptd.id_pedido = p.nro_pedido;
+                    ptd.id_pedido = p.nro_pedido; ;
                     ptd.cod_articulo = item["codigo_art"];
-                    ptd.tiempo = Convert.ToInt32(item["tiempo"]);
+                    ptd.EsPedidoLegal = 0;
+                    ptd.EsPedidoPresupuesto = 0;
                     ptd.estado = 1;
-                    ptd.fechaCreacion = DateTime.Now;
-
-                    //realizo la marcacion de pedidos diferidos con las actas de satisfaccion
-
-                    dpda.id_pedido = nro_ped;
-                    dpda.cod_articulo = item["codigo_art"];
-                    //var ped = conn.pedidos.Where(x => x.nro_pedido == nro_ped).First();
-                    dpda.usuario = usuario;
-                    dpda.Estado = 0;
-                    dpda.EsPedidoLegalizado = 0;
-                    dpda.FechaCreacion = DateTime.Now;
-                    dpda.FechaActualizacion = DateTime.Now;
-                   
-
-                    conn.pedidos_tiempo_diff.Add(ptd);
+                    ptd.usuario = usuario;
+                    ptd.FechaCreacion = DateTime.Now;
+                    ptd.FechaActualizacion = DateTime.Now;
+                    //realizo la marcacion de pedidos diferidos con las actas de satisfaccio
+                    
                     conn.detalle_pedido.Add(r);
-                    conn.detalle_pedido_diff_acta.Add(dpda);
-
+                    conn.pedido_diferido_tiempo.Add(ptd);
                 }
                 int rs = conn.SaveChanges();
                 arr.Add(rs);
                 arr.Add(p.nro_pedido);
 
-                foreach (dynamic item in list)
-                {
-                    var procedure1 = conn.INSERT_AMORTIZACION(nro_ped + "", item["cantidad"], item["codigo_art"]);
+                //foreach (dynamic item in list)
+                //{
+                //    var procedure1 = conn.INSERT_AMORTIZACION(nro_ped + "", item["cantidad"], item["codigo_art"]);
 
-                }
+                //}
                 // var proc = conn.INSERT_AMORTIZACION()
-
-                var procedure = conn.validate_presupuesto_diff(nro_ped + "");
+                var procedure = conn.validate_presupuesto(nro_ped + "");
+                //var procedure = conn.validate_presupuesto_diff(nro_ped + "");
                 return jss.Serialize(arr);
             }
             catch (DbEntityValidationException e)
@@ -4097,7 +4086,7 @@ namespace Rhino.Service
                     das.activo = it["activo"];
 
                     conn.detalle_acta_satis.Add(das);
-                    ValidarPedidoDiferido(Convert.ToInt32(it["nro_pedido"]), c.consecutivo_as);
+                    ValidarPedidoDiferido(Convert.ToInt32(it["nro_pedido"]), c.consecutivo_as, Convert.ToDecimal(it["valor_max"]));
                 }
 
                 c.consecutivo_as = c.consecutivo_as + 1;
@@ -4126,19 +4115,39 @@ namespace Rhino.Service
             }
         }
 
-        public void ValidarPedidoDiferido(int pedido, int consecutivo)
+        public void ValidarPedidoDiferido(int pedido, int consecutivo, Decimal valorMaximo)
         {
-            var pedidoDiff = conn.detalle_pedido_diff_acta.Where(x => x.id_pedido == pedido).ToList();
-            if(pedidoDiff != null)
+            Double valorMaximo_ = Convert.ToDouble(valorMaximo);
+            string cod_articulo_diff = "";
+            //srp Srp = 
+            using (var conex = new rhinoEntities())
             {
-                foreach(detalle_pedido_diff_acta dpa in pedidoDiff)
+                var pedido_tiempo_differ = conex.pedido_diferido_tiempo.Where(x => x.id_pedido == pedido).First();
+                if(pedido_tiempo_differ != null)
                 {
-                    dpa.consecutivo = consecutivo;
-                    //conn.detalle_pedido_diff_acta.
-                    conn.Entry(dpa).State = System.Data.EntityState.Modified;
+                    srp Srp = conex.srp.Where(x => x.id_pedido == pedido && x.total == valorMaximo_).First();
+                    if(Srp != null)
+                    {
+                        if(Srp.grupo != null)
+                        {
+                            if (Srp.grupo.Contains('-'))
+                            {
+                                cod_articulo_diff = Srp.grupo.Split('-')[1];
+                                var pedidoTiempoDiffAux = conex.pedido_diferido_tiempo.Where(x => x.id_pedido == pedido && x.cod_articulo == cod_articulo_diff).First();
+                                if(pedidoTiempoDiffAux != null)
+                                {
+                                    pedidoTiempoDiffAux.consecutivo = consecutivo;
+                                    pedidoTiempoDiffAux.EsPedidoLegal = 1;
+                                    conex.Entry(pedidoTiempoDiffAux).State = System.Data.EntityState.Modified;
+                                    conex.SaveChanges();
+                                }
+                            }
+                        }
+                    }
                 }
-                conn.SaveChanges();
+              
             }
+            
         }
 
         public string Update_ASatisfaccion(string json)
@@ -5924,11 +5933,13 @@ namespace Rhino.Service
             string s = "";
             List<listarPedidoAmortizacion> pedidosAmortizacion = new List<listarPedidoAmortizacion>();
             var connection = System.Configuration.ConfigurationManager.ConnectionStrings["conexion"].ConnectionString;
-            string query = "select a.id_pedido, a.cod_art, a.descripcion, a.valor as valorSrp,a.v_util,a.cuota, \n"+
+            string query = "select a.id_pedido, a.cod_art, a.descripcion, a.valor as valorSrp,isnull(a.valorFactura,0) as valorFactura,a.v_util,a.cuota, \n" +
                             "isnull((select top(1)nro_factura from acta_satisfaccion_nueva asn inner join detalle_acta_satis das on asn.consecutivo = das.consecutivo where das.nro_pedido = a.id_pedido), 'SIN FACTURA') as NumeroFac, \n"+
                             "a.ccosto, a.cuenta,a.rubro, count(a.id_pedido) as cantidadpedido, \n"+
-                            "(select count(*) from amortizacion where EsIngresada = 1 and id_pedido = a.id_pedido) as Amortizar from amortizacion a \n"+
-                            "group by a.id_pedido,a.cod_art,a.descripcion,a.valor,a.v_util,a.cuota,a.ccosto,a.cuenta,a.rubro";
+                            "(select count(*) from amortizacion where EsIngresada = 1 and id_pedido = a.id_pedido and cod_art = a.cod_art) as Amortizar, \n" +
+                            "isnull((select count(*) from entrada_producto_diferido where pedido = a.id_pedido and cod_articulo = a.cod_art),0) as pedidoIngreso \n"+
+                            "from amortizacion a where a.cod_art not in (select cod_articulo from detalle_amortizacion da where da.id_pedido = a.id_pedido and da.cod_articulo = a.cod_art) \n" +
+                            "group by a.id_pedido,a.cod_art,a.descripcion,a.valor,a.valorFactura,a.v_util,a.cuota,a.ccosto,a.cuenta,a.rubro";
             using (SqlConnection con = new SqlConnection(connection.ToString()))
             {
                 using (SqlCommand cmd = new SqlCommand(query))
@@ -5945,6 +5956,7 @@ namespace Rhino.Service
                                 cod_art = srd["cod_art"] + "",
                                 descripcion = srd["descripcion"] + "",
                                 valorSrp = Convert.ToDecimal(srd["valorSrp"]),
+                                valorFactura = Convert.ToDecimal(srd["valorFactura"]),
                                 v_util = Convert.ToInt32(srd["v_util"]),
                                 cuota = Convert.ToInt32(srd["cuota"]),
                                 NumeroFac = srd["NumeroFac"]+"",
@@ -5952,7 +5964,8 @@ namespace Rhino.Service
                                 cuenta = srd["cuenta"]+"",
                                 rubro = srd["rubro"]+"",
                                 cantidadpedido = Convert.ToInt32(srd["cantidadpedido"]),
-                                Amortizar = Convert.ToInt32(srd["Amortizar"])
+                                Amortizar = Convert.ToInt32(srd["Amortizar"]),
+                                pedidoIngreso = Convert.ToInt32(srd["pedidoIngreso"])
                             });
                         }
                     }
@@ -5961,6 +5974,37 @@ namespace Rhino.Service
             }
                 
             return jss.Serialize(pedidosAmortizacion);
+        }
+
+        public string ListarPedidosTiempo()
+        {
+            List<PedidosDiferidos> pedidosDiff = new List<PedidosDiferidos>();
+            var connection = System.Configuration.ConfigurationManager.ConnectionStrings["conexion"].ConnectionString;
+            string query = "select distinct id_pedido,usuario  from pedido_diferido_tiempo where EsPedidoPresupuesto = 0";
+            using (SqlConnection con = new SqlConnection(connection.ToString()))
+            {
+                using (SqlCommand cmd = new SqlCommand(query))
+                {
+                    cmd.Connection = con;
+                    con.Open();
+                    using (SqlDataReader srd = cmd.ExecuteReader())
+                    {
+                        while (srd.Read())
+                        {
+                            pedidosDiff.Add(new PedidosDiferidos
+                            {
+                                id_pedido = Convert.ToInt32(srd["id_pedido"]),
+                                usuario = srd["usuario"]+""
+                            });
+                        }
+                    }
+                    con.Close();
+                }
+            }
+
+
+
+            return jss.Serialize(pedidosDiff);
         }
 
         public string SaveFileArticulosDiff(string json)
@@ -6030,52 +6074,368 @@ namespace Rhino.Service
 
             var detallePediodo = conn.detalle_pedido.Where(x => x.id_pedido == pedidoValidar && x.codigo_art.Equals(cod_articulo)).First();
             var pedidoAmort = conn.amortizacion.Where(x => x.id_pedido == pedidoValidar && x.cod_art.Equals(cod_articulo) && x.EsIngresada == 0).ToList();
-            
-            if(detallePediodo != null)
+            Boolean pedidoLegal = EsPeidoLegal(pedidoValidar);
+            if (pedidoLegal)
             {
-                if (totalRegExcel - 1 > pedidoAmort.Count())
+                if (detallePediodo != null)
                 {
+                    if (totalRegExcel - 1 > pedidoAmort.Count())
+                    {
 
-                    arr.Add(0);
-                    arr.Add("Error la cantidad de registros en el excel supera la cantida del pedido con el articulo");
+                        arr.Add(0);
+                        arr.Add("Error la cantidad de registros en el excel supera la cantida del pedido con el articulo");
+                    }
+                    else
+                    {
+                        foreach (temp_entrada_producto_aux tem_aux in temp_pedidos)
+                        {
+                            CrearConsecutivoPedidoAmort(conn, out asignaConsecutivoPedido);
+                            temp_entrada_producto temp_entrada = new temp_entrada_producto();
+                            temp_entrada.tipo = tem_aux.tipo;
+                            temp_entrada.pedido = tem_aux.pedido;
+                            temp_entrada.asignacion = asignaConsecutivoPedido + "";
+                            temp_entrada.cod_articulo = tem_aux.cod_articulo;
+                            temp_entrada.descripcion = tem_aux.descripcion;
+                            temp_entrada.observacion = tem_aux.observacion;
+                            temp_entrada.valorActa = tem_aux.valorActa;
+                            temp_entrada.ccosto = tem_aux.ccosto;
+                            temp_entrada.causacion = tem_aux.causacion;
+                            temp_entrada.Estado = tem_aux.Estado;
+                            temp_entrada.FechaCreacion = tem_aux.FechaCreacion;
+                            temp_entrada.usuario = tem_aux.usuario;
+                            temp_entrada.EsProcesado = 0;
+                            conn.temp_entrada_producto.Add(temp_entrada);
+                            conn.SaveChanges();
+                        }
+                    }
+
+                    
                 }
                 else
                 {
-                    foreach(temp_entrada_producto_aux tem_aux in temp_pedidos)
-                    {
-                        CrearConsecutivoPedidoAmort(conn, out asignaConsecutivoPedido);
-                        temp_entrada_producto temp_entrada = new temp_entrada_producto();
-                        temp_entrada.tipo = tem_aux.tipo;
-                        temp_entrada.pedido = tem_aux.pedido;
-                        temp_entrada.asignacion = asignaConsecutivoPedido + "";
-                        temp_entrada.cod_articulo = tem_aux.cod_articulo;
-                        temp_entrada.descripcion = tem_aux.descripcion;
-                        temp_entrada.observacion = tem_aux.observacion;
-                        temp_entrada.ccosto = tem_aux.ccosto;
-                        temp_entrada.causacion = tem_aux.causacion;
-                        temp_entrada.Estado = tem_aux.Estado;
-                        temp_entrada.FechaCreacion = tem_aux.FechaCreacion;
-                        temp_entrada.usuario = tem_aux.usuario;
-                        temp_entrada.EsProcesado = 0;
-
-                        conn.temp_entrada_producto.Add(temp_entrada);
-                        conn.SaveChanges();
-
-                    }
-                    
+                    arr.Add(0);
+                    arr.Add("Error al procesar el Excel");
                 }
             }
             else
             {
                 arr.Add(0);
-                arr.Add("Error al procesar el Excel");
+                arr.Add("El pedido no tiene un acta de satisfaccion");
             }
 
-            temp_pedido_ = conn.temp_entrada_producto.Where(x => x.pedido == pedidoValidar).ToList();
+            temp_pedido_ = conn.temp_entrada_producto.Where(x => x.pedido == pedidoValidar && x.cod_articulo == cod_articulo).ToList();
+            //temp_pedidos.RemoveAll(x => x.pedido == pedidoValidar);
             //var detallePedido = 
             arr.Add(1);
             arr.Add(temp_pedido_);
             return jss.Serialize(arr);
+        }
+
+        public string listarDetallePedidoDiff(string json)
+        {
+
+            string s = "";
+            JObject data = JObject.Parse(json);
+            string detallePed = Convert.ToString(data["item"]);
+            PedidosDiferidos pedDiff = JsonConvert.DeserializeObject<PedidosDiferidos>(detallePed);
+            var datPed = conn.pedido_diferido_tiempo.Where(x => x.id_pedido == pedDiff.id_pedido).ToList();
+
+            return jss.Serialize(datPed);
+        }
+
+        public string validarPedidoDiferidoSrp(string json)
+        {
+            string s = "";
+            List<object> arr = new List<object>();
+            JObject data = JObject.Parse(json);
+
+            string detallePed = Convert.ToString(data["id_pedido"]);
+            int id_pedido = Convert.ToInt32(detallePed);
+            List<pedido_diferido_tiempo> pdt = conn.pedido_diferido_tiempo.Where(x => x.id_pedido == id_pedido).ToList();
+            Boolean porCompletar = validarPedidoDiferidoTiempo(pdt);
+            if (porCompletar)
+            {
+                int valor = 1;
+                s = "los articulos en el pedido " + id_pedido + " faltan articulos por asignar el tiempo y las fechas inicial y final";
+                arr.Add(valor);
+                arr.Add(s);
+            }
+            else
+            {
+                var procedure = conn.validate_presupuesto_diff(id_pedido + "");
+                if(procedure > 0)
+                {
+                    foreach(pedido_diferido_tiempo ptdAmort in pdt)
+                    {
+                        var _detalle_pedido = conn.detalle_pedido.Where(x => x.id_pedido == ptdAmort.id_pedido && x.codigo_art == ptdAmort.cod_articulo).First();
+                        if(_detalle_pedido != null)
+                        {
+                            var procedure1 = conn.INSERT_AMORTIZACION(ptdAmort.id_pedido + "", _detalle_pedido.cantidad, ptdAmort.cod_articulo);
+                            if (procedure1 > 0)
+                            {
+                                pedido_diferido_tiempo pedtd = conn.pedido_diferido_tiempo.Where(x => x.id_pedido == ptdAmort.id_pedido &&
+                                                                                                      x.cod_articulo == ptdAmort.cod_articulo).First();
+                                if (pedtd != null)
+                                {
+                                    pedtd.EsPedidoPresupuesto = 1;
+                                    conn.Entry(pedtd).State = System.Data.EntityState.Modified;
+                                    int saveChan = conn.SaveChanges();
+                                }
+                            }
+                        }
+                        
+                    }
+                }
+                int valor = 2;
+                s = "se realizo la validacion del srp y amortizacion de los articulos del pedido "+id_pedido;
+                arr.Add(valor);
+                arr.Add(s);
+            }
+
+            return jss.Serialize(arr);
+        }
+
+        public static Boolean validarPedidoDiferidoTiempo(List<pedido_diferido_tiempo> ptd)
+        {
+            Boolean porCompletar = false;
+            foreach(pedido_diferido_tiempo ptdaux in ptd)
+            {
+                if(ptdaux.tiempo_amortizar == null || ptdaux.fecha_inicio == null || ptdaux.fecha_final == null)
+                {
+                    porCompletar = true;
+                }
+            }
+            return porCompletar;
+        }
+
+        public static Boolean EsPeidoLegal(int pedido)
+        {
+            Boolean pedidoLegal = false;
+            using(var conex = new rhinoEntities())
+            {
+                var _pedido_Tiempo_diferido = conex.pedido_diferido_tiempo.Where(x => x.id_pedido == pedido).ToList();
+                if(_pedido_Tiempo_diferido != null)
+                {
+                    foreach(pedido_diferido_tiempo ptd in _pedido_Tiempo_diferido)
+                    {
+                        if(ptd.EsPedidoLegal == 1)
+                        {
+                            pedidoLegal = true;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+            return pedidoLegal;
+        }
+
+        public string setPedidoDiffTiempo(string json)
+        {
+            string m = "";
+            List<object> arr = new List<object>();
+            JObject data = JObject.Parse(json);
+            string detallePedi = Convert.ToString(data["item"]);
+            List<pedido_diferido_tiempo> pedDiff = JsonConvert.DeserializeObject<List<pedido_diferido_tiempo>>(detallePedi);
+            try
+            {
+                foreach (pedido_diferido_tiempo pdt in pedDiff)
+                {
+                    pedido_diferido_tiempo pdt_2 = conn.pedido_diferido_tiempo.Where(x => x.id == pdt.id).First();
+                    //pdt_2.tiempo_amortizar = pdt.tiempo_amortizar;
+                    pdt_2.fecha_inicio = pdt.fecha_inicio;
+                    pdt_2.fecha_final = pdt.fecha_final;
+                    DateTime FechaIni = (DateTime)pdt_2.fecha_inicio;
+                    DateTime FechaFin = (DateTime)pdt_2.fecha_final;
+                    var diffMonths = (FechaFin.Month + FechaFin.Year * 12) - (FechaIni.Month + FechaIni.Year * 12);
+                    pdt_2.tiempo_amortizar = diffMonths;
+                    conn.Entry(pdt_2).State = System.Data.EntityState.Modified;
+                    int saveChan = conn.SaveChanges();
+                    if (saveChan > 0)
+                    {
+                        pedido_diferido_tiempo pdt_3 = conn.pedido_diferido_tiempo.Where(x => x.id == pdt.id).First();
+                        m = "Modificado de Forma Exitosa";
+                        arr.Add(m);
+                        arr.Add(pdt_3);
+                    }
+                }
+                return jss.Serialize(arr);
+            }
+            catch (DbEntityValidationException e)
+            {
+                string err = "";
+                foreach (var eve in e.EntityValidationErrors)
+                {
+                    Console.WriteLine("Entity of type \"{0}\" in state \"{1}\" has the following validation errors:",
+                        eve.Entry.Entity.GetType().Name, eve.Entry.State);
+                    foreach (var ve in eve.ValidationErrors)
+                    {
+                        err += ve.ErrorMessage;
+                        Console.WriteLine("- Property: \"{0}\", Error: \"{1}\"",
+                            ve.PropertyName, ve.ErrorMessage);
+                    }
+                }
+                return jss.Serialize(err);
+            }
+
+
+
+        }
+
+        public string ActivarAmortizacion(string json)
+        {
+            string m = "";
+            JObject data = JObject.Parse(json);
+            string strAmortPed = Convert.ToString(data["item"]);
+            listarPedidoAmortizacion pedidoAmor = JsonConvert.DeserializeObject<listarPedidoAmortizacion>(strAmortPed);
+            List<amortizacion> amort = conn.amortizacion.Where(x => x.id_pedido == pedidoAmor.id_pedido &&
+                                                               x.cod_art == pedidoAmor.cod_art &&
+                                                               x.Imei != null &&
+                                                               x.EsIngresada == 1 &&
+                                                               x.EsAmortizacionActiva == 0 &&
+                                                               x.Estado == 1).ToList();
+            
+            foreach(amortizacion amrt in amort)
+            {
+                detalle_amortizacion det_amort = new detalle_amortizacion();
+                det_amort.id_pedido = amrt.id_pedido;
+                det_amort.imei = amrt.Imei;
+                det_amort.cod_articulo = amrt.cod_art;
+                det_amort.descripcion = amrt.descripcion;
+                det_amort.ccosto = amrt.ccosto;
+                det_amort.cuenta = amrt.cuenta;
+                det_amort.rubro = amrt.rubro;
+                det_amort.valor_activo = Convert.ToInt32(amrt.valorFactura);
+                var entrada_prod_diff = conn.entrada_producto_diferido.Where(x => x.asignacion == det_amort.imei).First();
+                if(entrada_prod_diff != null)
+                {
+                    det_amort.fecha_compra = entrada_prod_diff.causacion;
+                }
+                det_amort.fecha_ini_amort = DateTime.Now;
+                det_amort.t_v_util = amrt.v_util;
+                det_amort.amort_acumulada = 0;
+                det_amort.saldo_libros = Convert.ToInt32(amrt.valorFactura);
+                det_amort.fecha_ejecucion = DateTime.Now;
+                det_amort.cuota = amrt.cuota;
+                det_amort.v_util_restante = amrt.v_util;
+                det_amort.mes_ult_ejecucion = DateTime.Now.Month;
+                det_amort.Estado = 1;
+                det_amort.FechaCreacion = DateTime.Now;
+                det_amort.FechaActualizacion = DateTime.Now;
+                conn.detalle_amortizacion.Add(det_amort);
+                int EsGuardarDetalleAmort = conn.SaveChanges();
+                if(EsGuardarDetalleAmort > 0)
+                {
+                    //se crean las amortizaciones x mes
+                    var detalle_amort = conn.detalle_amortizacion.Where(x => x.imei == amrt.Imei).First();
+                    var now = DateTime.Now;
+                    if (detalle_amort != null)
+                    {
+                        for (int i = 0; i < amrt.v_util; i++)
+                        {
+                            amortizacion_por_mes amort_mes = new amortizacion_por_mes();
+                            amort_mes.cod_detalle_amortizacion = detalle_amort.id;
+                            amort_mes.pedido = Convert.ToInt32(detalle_amort.id_pedido);
+                            amort_mes.cod_articulo = detalle_amort.cod_articulo;
+                            amort_mes.imei = detalle_amort.imei;
+                            var startOfMonth = new DateTime(now.Year, now.Month, now.Day);
+                            var dateAddMonth = startOfMonth.AddMonths(i);
+                            amort_mes.mes_amortizar = dateAddMonth;
+                            amort_mes.ano = dateAddMonth.Year;
+                            amort_mes.Estado = 1;
+                            amort_mes.FechaCreacion = DateTime.Now;
+                            amort_mes.FechaActualizacion = DateTime.Now;
+                            conn.amortizacion_por_mes.Add(amort_mes);
+                            conn.SaveChanges();
+                            
+                        }
+                        validarPrimerMesAmortizar(detalle_amort.imei);
+                    }
+                   
+                }
+            }
+            return jss.Serialize(m);
+        }
+
+        public static void validarPrimerMesAmortizar(string imei)
+        {
+            using(var conex = new rhinoEntities())
+            {
+                var data = conex.amortizacion_por_mes.Where(x => x.imei == imei).ToList();
+                var FechaAhora = DateTime.Now;
+                foreach(amortizacion_por_mes am_mes in data)
+                {
+                    if(am_mes.mes_amortizar.Month <= FechaAhora.Month && am_mes.ano == FechaAhora.Year)
+                    {
+                        int sumAcu = 0;
+                        
+                        var detalle_amort = conex.detalle_amortizacion.Where(x => x.imei == imei).First();
+                        sumAcu = sumAcu + Convert.ToInt32(detalle_amort.cuota);
+                        am_mes.couta = detalle_amort.cuota;
+                        am_mes.mes_amortizado = DateTime.Now;
+                        am_mes.acumulado = sumAcu;
+                        am_mes.mescierre = 1;
+                        conex.Entry(am_mes).State = System.Data.EntityState.Modified;
+                        int EsActualizarAmorMes = conex.SaveChanges();
+                        if(EsActualizarAmorMes > 0)
+                        {
+                            detalle_amort.amort_acumulada = sumAcu;
+                            detalle_amort.saldo_libros = (Convert.ToInt32(detalle_amort.saldo_libros) - detalle_amort.cuota);
+                            detalle_amort.v_util_restante = detalle_amort.v_util_restante - 1;
+                            conex.Entry(detalle_amort).State = System.Data.EntityState.Modified;
+                            int EsGuardarDetalleAmort = conex.SaveChanges();
+                            if(EsGuardarDetalleAmort > 0)
+                            {
+                                var amortizacion = conex.amortizacion.Where(x => x.Imei == imei).First();
+                                amortizacion.EsAmortizacionActiva = 1;
+                                conex.Entry(amortizacion).State = System.Data.EntityState.Modified;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public string detalleArticuloAmortDiffActivo(string json)
+        {
+            JObject data = JObject.Parse(json);
+            string imei = Convert.ToString(data["imei"]);
+
+            var data_detalle = new Object();
+            //data_detalle = conn.detalle_amortizacion.Where(x => x.imei == imei).ToList();
+            data_detalle = conn.amortizacion_por_mes.Where(x => x.imei == imei).ToList();
+
+            return jss.Serialize(data_detalle);
+        }
+
+        public string ListarArticulosDiffActivos()
+        {
+            string s = "";
+            var data = new Object();
+            data = (from da in conn.detalle_amortizacion
+                    join a in conn.amortizacion on da.imei equals a.Imei
+                    where (a.EsAmortizacionActiva == 1)
+                    select new
+                    {
+                        id = da.id,
+                        id_pedido = da.id_pedido,
+                        imei = da.imei,
+                        cod_articulo = da.cod_articulo,
+                        descripcion = da.descripcion,
+                        ccosto = da.ccosto,
+                        cuenta = da.cuenta,
+                        rubro = da.rubro,
+                        valor_activo = da.valor_activo,
+                        t_v_util = da.t_v_util,
+                        v_util_restante = da.v_util_restante,
+                        cuota = da.cuota,
+                        saldo_libros = da.saldo_libros,
+                        amort_acumulada = da.amort_acumulada
+                    }).ToList();
+
+            return jss.Serialize(data);
         }
 
         public string setIngresoAmortizacion(string json)
@@ -6102,6 +6462,7 @@ namespace Rhino.Service
                     prod_diff.cod_articulo = tempP.cod_articulo;
                     prod_diff.descripcion = tempP.descripcion;
                     prod_diff.observacion = tempP.observacion;
+                    prod_diff.valorActa = tempP.valorActa;
                     prod_diff.ccosto = tempP.ccosto;
                     prod_diff.causacion = tempP.causacion;
                     prod_diff.Estado = tempP.Estado;
@@ -6126,6 +6487,8 @@ namespace Rhino.Service
                         {
                             amort.EsIngresada = 1;
                             amort.Imei = tempP.asignacion;
+                            amort.valorFactura = Convert.ToDouble(tempP.valorActa);
+                            amort.cuota = Convert.ToInt32((Convert.ToDouble(tempP.valorActa)/ amort.v_util));
                             conn.Entry(amort).State = System.Data.EntityState.Modified;
                             conn.SaveChanges();
                         }
@@ -6176,29 +6539,29 @@ namespace Rhino.Service
                 {
                     if (counter >= 1)
                     {
-                       
-                        
                         //Excel e = new Excel();
                         sb.AppendLine();
-                        temp_produc.Add(new temp_entrada_producto_aux
+                        if (!string.IsNullOrEmpty(row.AllocatedCells[7].StringValue))
                         {
-                            
-                            tipo = Convert.ToInt32(row.AllocatedCells[0].StringValue),
-                            pedido = Convert.ToInt32(row.AllocatedCells[1].StringValue),
-                            
-                            cod_articulo = row.AllocatedCells[3].StringValue,
-                            descripcion = row.AllocatedCells[4].StringValue,
-                            observacion = row.AllocatedCells[5].StringValue,
-                            ccosto = row.AllocatedCells[6].StringValue,
-                            causacion = DateTime.Now,
-                            Estado = 1,
-                            FechaCreacion = DateTime.Now,
-                            usuario = usuario,
-                            EsProcesado = 0
-                        }); ; ;
-
-                        
-                        
+                            string _fechaCausacion = row.AllocatedCells[7].StringValue;
+                            DateTime fechaCausacion = DateTime.Parse(_fechaCausacion.ToString(), CultureInfo.CreateSpecificCulture("en-US"));
+                            //DateTime.TryParse(_fechaCausacion, out fechaCausacion);
+                            temp_produc.Add(new temp_entrada_producto_aux
+                            {
+                                tipo = Convert.ToInt32(row.AllocatedCells[0].StringValue),
+                                pedido = Convert.ToInt32(row.AllocatedCells[1].StringValue),
+                                cod_articulo = row.AllocatedCells[2].StringValue,
+                                descripcion = row.AllocatedCells[3].StringValue,
+                                observacion = row.AllocatedCells[4].StringValue,
+                                ccosto = row.AllocatedCells[5].StringValue,
+                                valorActa = row.AllocatedCells[6].StringValue,
+                                causacion = fechaCausacion,
+                                Estado = 1,
+                                FechaCreacion = DateTime.Now,
+                                usuario = usuario,
+                                EsProcesado = 0
+                            });
+                        }
                         
                     }
                     counter++;
